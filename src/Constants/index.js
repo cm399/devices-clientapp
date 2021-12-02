@@ -1,23 +1,22 @@
-import { v4 } from "uuid";
 
-export const DevideTypes = [
+export const DeviceTypes = [
   {
-    id: v4(),
+    id: 1,
     type: "All",
     value: "ALL"
   },
   {
-    id: v4(),
+    id: 2,
     type: "Windows Workstation",
     value: "WINDOWS_WORKSTATION"
   },
   {
-    id: v4(),
+    id: 3,
     type: "Windows Server",
     value: "WINDOWS_SERVER"
   },
   {
-    id: v4(),
+    id: 4,
     type: "Mac",
     value: "MAC"
   }
@@ -25,11 +24,11 @@ export const DevideTypes = [
 
 export const SortByFields = [
   {
-    id: v4(),
+    id: 1,
     type: "System Name"
   },
   {
-    id: v4(),
+    id: 2,
     type: "HDDCapacity"
   }
 ]

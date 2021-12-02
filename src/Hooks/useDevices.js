@@ -1,30 +1,30 @@
 import { useEffect, useState } from "react";
-import { v4 } from "uuid";
-import { DevideTypes, SortByFields } from "./../Constants/";
+import { findDeviceType, findSortBy } from "../Helper";
+import { DeviceTypes, SortByFields } from "./../Constants/";
 import API from "./../Helper/API";
 
 const initColumns = [
   {
-    id: v4(),
+    id: 1,
     column: "Device Type"
   },
   {
-    id: v4(),
+    id: 2,
     column: "System Name",
     align: "right"
   },
   {
-    id: v4(),
+    id: 3,
     column: "HDD Capacity",
     align: "right"
   },
   {
-    id: v4(),
+    id: 4,
     column: "Edit",
     align: "right"
   },
   {
-    id: v4(),
+    id: 5,
     column: "Delete",
     align: "right"
   },
@@ -34,32 +34,61 @@ const useDevices = () => {
 
   const [devices, setDevices] = useState([]);
   const [filteredDevices, setFilteredDevices] = useState([]);
-  const [filterValues, setFilterValues] = useState({ DeviceType: DevideTypes[0].id, SortBy: SortByFields[0].id });
-  const [tableColumn] = useState(initColumns);
+  const [filterValues, setFilterValues] = useState({ DeviceType: DeviceTypes[0].id, SortBy: SortByFields[0].id });
   const [editDeviceInfo, setEditDeviceInfo] = useState({ modal: false, isEdit: false, device: {} });
+  const [ErrorMessage, setErrorMessage] = useState({ show: false, variant: "error", message: "" });
 
+  useEffect(console.clear)
 
-  const getAllDevides = async () => {
-    const { data } = await API.get("/devices")
-    if (data) {
-      setDevices(data);
-      setFilteredDevices(data);
+  const getAllDevices = async () => {
+    try {
+      const { data } = await API.get("/devices")
+      if (data) {
+        data.sort(function (a, b) {
+          if (a.system_name < b.system_name) { return -1; }
+          if (a.system_name > b.system_name) { return 1; }
+          return 0;
+        });
+        setDevices(data);
+        setFilterValues({ DeviceType: DeviceTypes[0].id, SortBy: SortByFields[0].id });
+        setFilteredDevices(data);
+      }
+    } catch (error) {
+      setErrorMessage({ ...ErrorMessage, show: true, message: "Something goes wrong here." })
     }
   }
 
-  useEffect(getAllDevides, [])
+  useEffect(() => {
+    getAllDevices();
+    onChangeFilters({ name: "SortBy", value: SortByFields[0].id });
+  }, [])
 
-  const findDeviceType = (filterId) => DevideTypes.find(({ id }) => id === filterId)
-  const findSortBy = (filterId) => SortByFields.find(({ id }) => id === filterId)
+  useEffect(() => {
+    let timeOut;
+    if (ErrorMessage.show)
+      setTimeout(() => {
+        setErrorMessage({ show: false, message: "" });
+      }, 4000)
+    return () => clearTimeout(timeOut);
+  }, [ErrorMessage])
 
   const onChangeFilters = ({ name, value }) => {
     setFilterValues({ ...filterValues, [name]: value })
-
     const filterFunctions = {
       "DeviceType": function (filteredID) {
         const { value } = findDeviceType(filteredID);
         if (value !== "ALL") {
-          const filteredDevice = devices.filter(({ type }) => type === value);
+          const filteredDevice = devices.filter(({ type }) => type === value).sort(function (a, b) {
+            const sortType = filterValues.SortBy === SortByFields[0].id ? "system_name" : "hdd_capacity";
+            if (sortType === "system_name") {
+              if (a[sortType] < b[sortType]) { return -1; }
+              if (a[sortType] > b[sortType]) { return 1; }
+            } else {
+              if (+a[sortType] < +b[sortType]) { return -1; }
+              if (+a[sortType] > +b[sortType]) { return 1; }
+            }
+            return 0;
+          });
           setFilteredDevices(filteredDevice);
         } else {
           setFilteredDevices(devices);
@@ -94,47 +123,39 @@ const useDevices = () => {
   }
 
   const onDeleteDevice = async (id) => {
-    await API.delete(`/devices/${id}`);
-    await getAllDevides()
-
-  }
-
-  const onEditClick = (ID) => {
-    const device = devices.find(({ id }) => id === ID);
-    setEditDeviceInfo({ modal: true, isEdit: true, device })
-  }
-
-  const onCloseModal = () => {
-    setEditDeviceInfo({ modal: false, isEdit: false, device: {} });
-  }
-
-  const onSubmitForm = async ({ id, ...value }, { ...props }) => {
-    console.log(value, "value", props);
-    if (editDeviceInfo.isEdit) {
-      await API.put(`/devices/${id}`, value)
-      setEditDeviceInfo({ modal: false, isEdit: false, device: {} })
-    } else {
-      await API.post(`/devices`, value)
-      setEditDeviceInfo({ modal: false, isEdit: false, device: {} })
+    try {
+      await API.delete(`/devices/${id}`);
+      await getAllDevices()
+    } catch (error) {
+      setErrorMessage({ ...ErrorMessage, show: true, message: "Something goes wrong here." })
     }
-    await getAllDevides()
   }
 
-  const onAddClick = () => {
-    setEditDeviceInfo({ modal: true, isEdit: false })
+  const onSubmitForm = async ({ id, ...value }) => {
+    try {
+      if (editDeviceInfo.isEdit) {
+        await API.put(`/devices/${id}`, value)
+        setEditDeviceInfo({ modal: false, isEdit: false, device: {} })
+      } else {
+        await API.post(`/devices`, value)
+        setEditDeviceInfo({ modal: false, isEdit: false, device: {} })
+      }
+      await getAllDevices()
+    } catch (error) {
+      setErrorMessage({ ...ErrorMessage, show: true, message: "Something goes wrong here." })
+    }
   }
 
   return ({
     devices,
     filteredDevices,
-    tableColumn,
+    tableColumn: initColumns,
     filterValues,
+    ErrorMessage,
     editDeviceInfo,
+    setEditDeviceInfo,
     onChangeFilters,
     onDeleteDevice,
-    onEditClick,
-    onAddClick,
-    onCloseModal,
     onSubmitForm
   })
 }

@@ -17,16 +17,21 @@ const useStyle = makeStyles((theme) => ({
   }
 }))
 
-const DataTable = ({ colunms, data, onDeleteDevice, onEditClick }) => {
+const DataTable = ({ columns, data, onDeleteDevice, setEditDeviceInfo }) => {
 
   const classes = useStyle();
+
+  const onEditClick = (ID) => {
+    const device = data.find(({ id }) => id === ID);
+    setEditDeviceInfo({ modal: true, isEdit: true, device })
+  }
 
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} stickyHeader aria-label="sticky simple table">
         <TableHead>
           <TableRow>
-            {colunms.map(({ id, align, column }) => <TableCell key={id} align={align}>{column}</TableCell>)}
+            {columns.map(({ id, align, column }) => <TableCell key={id} align={align}>{column}</TableCell>)}
           </TableRow>
         </TableHead>
         <TableBody>
